@@ -79,6 +79,12 @@ public class MeshCreater : MonoBehaviour
             mesh.colors = colors;
             mesh.RecalculateNormals();
 
+            Color cl;
+            GameObject imp = GameObject.FindWithTag("Implant");
+            cl = imp.gameObject.GetComponent<MeshRenderer>().material.color;
+            imp.gameObject.GetComponent<MeshRenderer>().material.color = new Color(1.0f, 1.0f, 1.0f, 0.0f);
+            
+
         }
 
 

@@ -15,14 +15,18 @@ from dataReadHandling import coordAndIndices2Triangles
 from util.octree.createSphereAndTriangles import createSpheres
 from util.octree.BoundingBoxTreeNode import BoundingBoxTreeNode
 from util.icp import octreeSearchMatch
+from highLightSkullArea import highLightSkullArea
 import socket
 import json
 import time
+import pickle
 
 loadCalibratedPointer = True
 loadCalibratedHemo = True
 loadCalibratedSkull = True
 loadCollectedImplant = True
+loadCollectedSkullHighLight = True
+loadOctree = True
 pathMeshFile = 'data/skullRimLeftHand.sur'
 quatSkull = np.array([-0.7071068, 0.0000000, 0.0000000, 0.7071068])
 posSkull = 1000 * np.array([-0.0330000, -0.0658000, -0.0580000])
@@ -79,6 +83,8 @@ surfImplant = pv.PolyData(tImplant).delaunay_2d()
 surfImplant.save('data/implantSurface.ply', binary=False)
 implantCoord, implantIndices = convertPlySur('data/implantSurface.ply')
 
+# 2.3 Put the model in the Unity
+# Done manually
 
 #############################################################################
 # 3. Receive a transformation of implant from virtual space (note now both implant and skull should be x-flipped)
@@ -88,10 +94,17 @@ rSkull = Rotation.from_quat(quatSkull)
 rImplant = Rotation.from_quat(quatImplant)
 
 # 3.1 Load the skull model and transform it to the moved position
-print('Data meshing ...')
-spheres = createSpheres(readAndTransformModel(pathMeshFile, rSkull.as_matrix(), posSkull))
-print('Creating octree ...')
-octree = BoundingBoxTreeNode(spheres)
+if loadOctree:
+    with open('data/out/octree.savedata', 'rb') as f:
+        octree = pickle.load(f)
+else:
+    print('Data meshing ...')
+    spheres = createSpheres(readAndTransformModel(pathMeshFile, rSkull.as_matrix(), posSkull))
+    print('Creating octree ...')
+    octree = BoundingBoxTreeNode(spheres)
+    with open('data/out/octree.savedata', 'wb') as f:
+        pickle.dump(octree, f)
+        
 print('Data meshing completed, and octree created.')
 
 # 3.2 Convert the implant model to left handedness (flip x) 
@@ -107,27 +120,44 @@ for i in range(implantCoordLeft.shape[0]):
 print('start searching ...')
 cOut, dist = octreeSearchMatch(implantCoordLeft, octree)
 
+# 3.5 Create a surface of matched skull area
+surfSkullMatch = pv.PolyData(cOut).delaunay_2d()
+surfSkullMatch.save('data/skullMatchSurfaceLeft.ply', binary=False)
+skullMatchCoord, skullMatchIndices = convertPlySur('data/skullMatchSurfaceLeft.ply')
+
 #############################################################################
 # 4. Send heat map data and the point pair on the skull
 
 # unity /1000
 implantCoordLeftSend = implantCoordLeft/1000
 implantIndicesSend = implantIndices.reshape(-1)
+skullMatchCoordSend = skullMatchCoord/1000
+skullMatchIndicesSend = skullMatchIndices.reshape(-1)
+
 # convert distance into 0~1 range
 distColor = (dist-min(dist))/(max(dist)-min(dist))
 
 udpIP = 'localhost'
 udpPort = 8051
+udpPortSkullMatch = 8059
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sockSkullMatch = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 message = json.dumps({'GetImplantMesh': {'vertices': implantCoordLeftSend.reshape(-1).tolist(), 'triangles': implantIndicesSend.tolist(), 'color': distColor.tolist()}})
+# note "GetImplantMesh" does not only work for implant. It's just a json block name. Did not want to change it
+messageSkullMatch = json.dumps({'GetImplantMesh': {'vertices': skullMatchCoordSend.reshape(-1).tolist(), 'triangles': skullMatchIndicesSend.tolist(), 'color': [0]*len(skullMatchCoordSend)}})
 # message = json.dumps({'GetImplantMesh': {'vertices': (0.1*np.array([[0,0.3,0],[0,0,1],[1,0.5,0],[1,0.5,1],[2,0.5,1],[3,0.5,3]])).reshape(-1).tolist(), 'triangles': [0,1,2,1,3,2,2,3,4,3,4,5], 'color': [0.1,1,0.3,1]}})
+print('start sending ...')
 for i in range(3000):
     sock.sendto(message.encode('utf-8'), (udpIP, udpPort))
+    sockSkullMatch.sendto(messageSkullMatch.encode('utf-8'), (udpIP, udpPortSkullMatch))
     time.sleep(5)
 sock.close()
+sockSkullMatch.close()
 
 #############################################################################
+# 5. Demo to the other application - skull locaton highlighting
 
+highLightSkullArea(loadCollectedSkullHighLight, pCalSkullLeft, pCalPointerLeft, rSkull.as_matrix(), posSkull, udpIP)
 
 
 

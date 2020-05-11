@@ -13,12 +13,17 @@ The visualization. Contains the Unity assets, project settings and packages.
 The server written in Python. Communicate with the Unity client using UDP.
 
 	2.1 main.py The main procedure script.
+
+	Calibration of the tools and markers -> Model sample collection -> Receive a transformation of implant from virtual space -> Send heat map data and the point pair on the skull -> Demo to the other application - skull locaton highlighting
 	
 		Some default option so that the user can use the data existing.
+
 		loadCalibratedPointer = True
 		loadCalibratedHemo = True
 		loadCalibratedSkull = True
 		loadCollectedImplant = True
+		loadCollectedSkullHighLight = True
+		loadOctree = True
 		pathMeshFile = 'data/skullRimLeftHand.sur'
 		quatSkull = np.array([-0.7071068, 0.0000000, 0.0000000, 0.7071068])
 		posSkull = 1000 * np.array([-0.0330000, -0.0658000, -0.0580000])
