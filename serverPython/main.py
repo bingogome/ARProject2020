@@ -24,6 +24,11 @@ loadCalibratedHemo = True
 loadCalibratedSkull = True
 loadCollectedImplant = True
 pathMeshFile = 'data/skullRimLeftHand.sur'
+quatSkull = np.array([-0.7071068, 0.0000000, 0.0000000, 0.7071068])
+posSkull = 1000 * np.array([-0.0330000, -0.0658000, -0.0580000])
+quatImplant = np.array([-0.4427488, -0.0442963, 0.1601198, 0.8811204])
+posImplant = 1000 * np.array([-0.0209000, 0.0522000, -0.0153000])
+
 
 # tool rom number: pointer - 2, hemostat - 1, skull reference - 0.
 
@@ -77,10 +82,7 @@ implantCoord, implantIndices = convertPlySur('data/implantSurface.ply')
 
 #############################################################################
 # 3. Receive a transformation of implant from virtual space (note now both implant and skull should be x-flipped)
-quatSkull = np.array([-0.7071068, 0.0000000, 0.0000000, 0.7071068])
-posSkull = 1000 * np.array([-0.0330000, -0.0658000, -0.0580000])
-quatImplant = np.array([-0.4427488, -0.0442963, 0.1601198, 0.8811204])
-posImplant = 1000 * np.array([-0.0209000, 0.0522000, -0.0153000])
+
 
 rSkull = Rotation.from_quat(quatSkull)
 rImplant = Rotation.from_quat(quatImplant)
@@ -125,7 +127,7 @@ for i in range(3000):
 sock.close()
 
 #############################################################################
-# 5. Overlay heat map to implant (need collect right and left hand implant at the same time)
+
 
 
 
